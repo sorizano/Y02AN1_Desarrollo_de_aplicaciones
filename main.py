@@ -2,61 +2,62 @@ import os
 import pandas as pd
 import streamlit as st
 from datetime import datetime
+from supabase import create_client
 
-DATA_DIR = "datos_sinteticos"
-CSV_PATH = os.path.join(DATA_DIR, "products.csv")
+# ------------------------------------------
+# Conexión a supabase
+# ------------------------------------------
+
+SUPABASE_URL = os.environ.get("https://ondncxfrkzerxndpzvjz.supabase.co")
+SUPABASE_KEY = os.environ.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9uZG5jeGZya3plcnhuZHB6dmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NDU3NzksImV4cCI6MjA1NzMyMTc3OX0.i-CknD56TkjtSzTW8gp4Ulr0VldY28nL1J-FBHG8uyc")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 ALLOWED_CATEGORIES = [
     "Chocolates", "Caramelos", "Mashmelos", "Galletas", "Salados", "Gomas de mascar"
 ]
 
-def ensure_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
+# ------------------------------------------
+# Funciones CRUD
+# ------------------------------------------
 
-def load_df() -> pd.DataFrame:
-    if os.path.exists(CSV_PATH):
-        df = pd.read_csv(CSV_PATH, encoding="utf-8")
-        return df
-    return pd.DataFrame(columns=["nombre", "precio", "categorias", "en_venta", "ts"])
+def sb_list() -> pd.DataFrame:
+    res = supabase.table("products").select("*").order("ts", desc=True).execute()
+    return pd.DataFrame(res.data or [])
 
-def validate(nombre: str, precio, categorias: list, en_venta_label: str):
-    #nombre
-    if len(nombre.strip()) == 0 or len(nombre.strip()) > 20:
-        raise ValueError("El nombre no puede estar vacío ni superar 20 caracteres.")
-    
-    #precio
-    if precio is None:
-        raise ValueError("Por favor verifique el campo del precio")
-    try:
-        p = float(precio)
-    except Exception:
-        raise ValueError("Por favor verifique en campo precio")
-    if not (0 < p < 999):
-        raise ValueError("El precio debe ser mayor a 0 y menor a 999.")
-    
-    #categorias
-    if not categorias:
-        raise ValueError("Debe elegir al menos una categoría.")
-    for c in categorias:
-        if c not in ALLOWED_CATEGORIES:
-            raise ValueError(f"Categoría inválida: {c}")
-    #en venta
-    if en_venta_label not in ["Sí", "No"]:
-        raise ValueError("Valor inválido para ¿está en venta?")
-    return nombre.strip(), round(p,2), sorted(list(set(categorias))), (en_venta_label == "Sí")
+def sb_insert(nombre: str, precio:float, categorias: list, en_venta: bool):
+    payload = {
+        "nombre": nombre,
+        "precio": precio,
+        "categorias": categorias,
+        "en_venta": en_venta,
+        "ts": datetime.utcnow().isoformat()
+    }
+    supabase.table("products").insert(payload).execute()
+
+def sb_update(id_:int, nombre: str, precio: float, categorias: list, en_venta:bool ):
+    payload = {
+        "nombre": nombre,
+        "precio": precio,
+        "categorias": categorias,
+        "en_venta": en_venta,
+    }
+    supabase.table("products").update(payload).eq("id", id_).execute()
+
+def sb_delete(id_: int):
+    supabase.table("products").delete().eq("id", id_).execute()
+
 
 
 #------------------------------------- UI -----------------------------------
 
 st.title("Confitería Dulcino - Registro de productos")
 
-with st.form("form-producto", clear_on_submit=True):
-    col1, col2 = st.columns([2,1])
-    with col1:
-        nombre = st.text_input("Nombre del producto")
-    with col2:
-        precio = st.number_input("Precio (S/)", min_value=0.0, max_value=998.99, step=0.10, format="%.2f")
+# ------- Crear Producto -------
+st.header("Agregar Producto")
+with st.form("form-add", clear_on_submit=True):
+    nombre = st.text_input("Nombre de producto")
+    precio = st.number_input("Precio (S/)", min_value=0.01, max_value=998.99, step=0.10)
     categorias = st.multiselect("Categorias", ALLOWED_CATEGORIES)
-    en_venta_label = st.radio("¿El producto está en venta?", options=["Sí", "No"], horizontal=True)
-
+    en_venta = st.radio("¿En Venta?",["Sí","No"]) == "Sí"
     submitted = st.form_submit_button("Guardar")
