@@ -143,4 +143,4 @@ else:
         if btn_delete:
             sb_delete(producto_id)
             st.success("Producto Eliminado")
-            st.rerun
+            st.rerun()
