@@ -109,4 +109,21 @@ else:
     producto_id = int(opciones[etiqueta])
     fila = df[df["id"]== producto_id].iloc[0]
 
-    
+    with st.form("form-edit"):
+        c1, c2 = st.columns([2,1])
+        with c1:
+            ed_nombre = st.text_input("Nombre", value=fila["nombre"])
+        with c2:
+            ed_precio = st.number_input(
+                "precio (S/)", value=float(fila["precio"]),
+                min_value=0.0, max_value=998.99, step=0.10, format="%.2f"
+            )
+        ed_categorias = st.multiselect("Categorías", ALLOWED_CATEGORIES, default=fila["categorias"])
+        ed_en_venta = st.radio("¿En venta?", ["Sí", "No"], index=0 if fila["en_venta"] else 1, horizontal=True) == "Sí"
+
+        colu1, colu2 = st.columns(2)
+        with colu1:
+            btn_update = st.form_submit_button("Guardar Cambios")
+        with colu2:
+            btn_delete = st.form_submit_button("Eliminar", type="primary")
+
