@@ -89,3 +89,24 @@ if submitted:
         st.success("Felicidades su producto se agregó")
         st.rerun()
 st.divider()
+
+# ----------------- Listar / Editar / Borrar -----------------------
+
+st.header("Productos registrados")
+df = sb_list()
+if df.empty:
+    st.info("No hay productos aún.")
+else:
+    st.dataframe(df, use_container_width=True)
+
+    #Seleccionar el producto
+    opciones = {
+        f"{r['nombre']} - {r['precio']}": r["id"] 
+        for _, r in df.iterrows()
+    }
+
+    etiqueta = st.selectbox("Selecciona para editar/eliminar", list(opciones.keys()))
+    producto_id = int(opciones[etiqueta])
+    fila = df[df["id"]== producto_id].iloc[0]
+
+    
