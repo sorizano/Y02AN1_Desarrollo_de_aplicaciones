@@ -127,3 +127,20 @@ else:
         with colu2:
             btn_delete = st.form_submit_button("Eliminar", type="primary")
 
+        if btn_update:
+            err = validar(ed_nombre, ed_precio, ed_categorias)
+            if err:
+                if "precio" in err.lower():
+                    st.error("Por favor verifique el campo precio.")
+                else:
+                    st.error("Lo sentimos no pudo actualizar este producto.")
+                st.info(err)
+            else:
+                sb_update(producto_id, ed_nombre.strip(), float(ed_precio), ed_categorias, ed_en_venta)
+                st.success("Producto Actualizado.")
+                st.rerun()
+        
+        if btn_delete:
+            sb_delete(producto_id)
+            st.success("Producto Eliminado")
+            st.rerun
